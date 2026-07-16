@@ -1,0 +1,62 @@
+# grok build — BYOK config for Nebius Token Factory + Tavily web search
+#
+# Install to: ~/.grok/config.toml
+# Requires env vars: NEBIUS_API_KEY, TAVILY_API_KEY (see README / env.example)
+#
+# Runs grok build with NO xAI subscription: the default model has its own
+# env_key, so the login screen never appears and all sampling goes to Nebius.
+
+# Built-in web search off (it only works via xAI's hosted /responses tool).
+# Web search is provided by the Tavily MCP server below instead.
+disable_web_search = true
+
+[cli]
+auto_update = false      # no update checks/downloads from xAI
+
+[models]
+default = "kimi-k2.7-code"
+# Auxiliary/internal models otherwise default to xAI's "grok-build" and 404 against Nebius.
+# Use full upstream IDs (not the aliases): the aux sampler sends this string verbatim on the
+# wire, while catalog lookup still matches it against the [model.*] entries' `model` field.
+session_summary = "moonshotai/Kimi-K2.7-Code"
+image_description = "Qwen/Qwen2.5-VL-72B-Instruct"  # Kimi is text-only; vision model for pasted images
+
+# NOTE: table names containing dots MUST be quoted, or TOML nests the key
+# ([model.kimi-k2.7-code] silently becomes model."kimi-k2"."7-code").
+[model."kimi-k2.7-code"]
+model = "moonshotai/Kimi-K2.7-Code"
+base_url = "https://api.tokenfactory.nebius.com/v1"
+name = "Kimi K2.7 Code (Nebius)"
+description = "Moonshot Kimi K2.7 Code via Nebius Token Factory"
+env_key = "NEBIUS_API_KEY"
+api_backend = "chat_completions"
+context_window = 256000
+max_completion_tokens = 8192
+# If tool-call streaming ever misbehaves with a provider, uncomment:
+# stream_tool_calls = false
+
+[model."qwen2.5-vl"]
+model = "Qwen/Qwen2.5-VL-72B-Instruct"
+base_url = "https://api.tokenfactory.nebius.com/v1"
+name = "Qwen2.5-VL 72B (Nebius)"
+description = "Vision model for image description via Nebius Token Factory"
+env_key = "NEBIUS_API_KEY"
+api_backend = "chat_completions"
+context_window = 32000
+
+# Web search via Tavily MCP server (replaces built-in web_search)
+[mcp_servers.tavily]
+command = "npx"
+args = ["-y", "tavily-mcp@latest"]
+env = { TAVILY_API_KEY = "${TAVILY_API_KEY}" }
+
+[features]
+telemetry = false        # analytics off
+feedback = false         # /feedback + popups (posts to xAI feedback endpoint)
+managed_config = false   # stop fetching managed config from xAI deployment endpoint
+backend_tools = false    # no server-side tool execution on xAI
+video_gen = false        # xAI-hosted video generation (default off; pinned off)
+web_fetch = false        # default off; pinned for clarity
+
+[telemetry]
+trace_upload = false     # no trace uploads
